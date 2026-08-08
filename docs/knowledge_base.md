@@ -125,4 +125,23 @@ an animal structure dict (coop/pasture, optionally occupied):
     "consecutive_unfed":    int,    # 2+ → animal escapes
     "cared_today":          bool,
     "fertilizer_available": bool,   # set after CARE; cleared by COLLECT_FERTILIZER
-    "pending_care_bonus":   int,    # banked CARE bonus, applied on the next yield tick
+    "pending_care_bonus":   int,    # banked CARE bonus, applied on the next yield tick}
+
+    Configuration Defaults
+Per-crop seed costs and per-product base prices are not configurable; they are documented in the Object Types and Price Function tables above. The configurable knobs are:
+
+Parameter	            Default	    Description
+episodeSteps    	     720	    Total turns in the season (24 turns × 30 days)
+boardSize	             10	        Width and height (in tiles) of each player's square farm. Advanced uses 10 = four 5x5 quadrants
+startingMoney   	    3000	    Coins each player starts with
+maxMarketOrdersPerTurn	10	        Maximum number of market orders processed per player per turn; extras are silently dropped
+turnsPerDay	            24	        Number of turns that make up one in-game day
+shedCapacity	        100	        Max non-seed items the shed can hold; overflow at end-of-day drop is discarded
+weedSpawnChance     	0.005	    Per-tile probability of a weed spawning on an empty unlocked tile during end-of-day refresh
+townShopUnlockInterval	3	        Days between successive town shop unlocks
+townShopSellInterval    4	        Turns between consumption ticks by every unlocked town shop
+townCenterSellInterval	12	        Turns between consumption ticks by the town center
+seed	                null	    Optional input seed for deterministic episode generation; cleared from config after 
+                                    so stays out of agent 
+
+
