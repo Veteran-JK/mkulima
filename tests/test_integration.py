@@ -7,6 +7,7 @@ hand-built state fixtures.
 
 import importlib
 import pytest
+from agent.models.position import Position
 
 try:
     kaggle_environments = importlib.import_module("kaggle_environments")
@@ -150,3 +151,191 @@ def test_seed_purchase_then_farming_against_real_environment():
 
     assert target is not None
     assert actions["market"] == []
+
+def test_seed_purchase_then_plant_against_real_environment():
+    """
+    Verify the complete opening -> farming -> planting transition
+    against the real Kaggriculture environment.
+    """
+
+    env, observations = get_initial_environment()
+
+    # --------------------------------------------------
+    # Turn 0: build state from real observation
+    # --------------------------------------------------
+
+    observation = observations[0].observation
+
+    state = GameState.from_observation(
+        observation,
+        env.configuration,
+    )
+
+    planner = Planner(state)
+
+    purchase_actions = planner.plan()
+
+    assert purchase_actions["market"] == [
+        ["BUY_SEED", "WHEAT", 1]
+    ]
+
+    # --------------------------------------------------
+    # Execute seed purchase
+    # --------------------------------------------------
+
+    observations = env.step([
+        purchase_actions,
+        {
+            "farmer": ["PASS"],
+            "hands": [],
+            "market": [],
+        },
+    ])
+
+    # --------------------------------------------------
+    # Turn 1: rebuild state
+    # --------------------------------------------------
+
+    observation = observations[0].observation
+
+    state = GameState.from_observation(
+        observation,
+        env.configuration,
+    )
+
+    assert state.seeds["WHEAT"] == 1
+
+    # --------------------------------------------------
+    # Planner should now propose farming
+    # --------------------------------------------------
+
+    planner = Planner(state)
+
+    actions = planner.plan()
+
+    # The real environment starts the farmer at (4, 4).
+    # FarmingStrategy selects (0, 0) as the first unlocked
+    # empty tile, so Planner should begin navigating toward it.
+
+    assert state.me.farmer.position == Position(4, 4)
+
+    assert actions["farmer"] == [
+        "NORTH",
+    ]
+
+    # --------------------------------------------------
+    # Execute planting against the real environment
+    # --------------------------------------------------
+
+    observations = env.step([
+        actions,
+        {
+            "farmer": ["PASS"],
+            "hands": [],
+            "market": [],
+        },
+    ])
+
+    # --------------------------------------------------
+    # Verify the real environment accepted the planting
+    # --------------------------------------------------
+
+    observation = observations[0].observation
+
+    state = GameState.from_observation(
+        observation,
+        env.configuration,
+    )
+
+    tile = state.me.tile_at(
+        Position(0, 0)
+    )
+
+    # --------------------------------------------------
+    # Navigate to the planting target
+    # --------------------------------------------------
+
+    target = Position(0, 0)
+
+    for _ in range(20):
+
+        observation = observations[0].observation
+
+        state = GameState.from_observation(
+            observation,
+            env.configuration,
+        )
+
+        planner = Planner(state)
+        actions = planner.plan()
+
+        farmer_position = state.me.farmer.position
+
+        if farmer_position == target:
+            break
+
+        assert actions["farmer"] != ["PASS"]
+
+        observations = env.step([
+            actions,
+            {
+                "farmer": ["PASS"],
+                "hands": [],
+                "market": [],
+            },
+        ])
+
+    else:
+        raise AssertionError(
+            "Farmer did not reach planting target."
+        )
+
+    # --------------------------------------------------
+    # Plant once the farmer reaches the target
+    # --------------------------------------------------
+
+    observation = observations[0].observation
+
+    state = GameState.from_observation(
+        observation,
+        env.configuration,
+    )
+
+    assert state.me.farmer.position == target
+
+    planner = Planner(state)
+
+    plant_actions = planner.plan()
+
+    assert plant_actions["farmer"] == [
+        "PLANT",
+        "WHEAT",
+    ]
+
+    # --------------------------------------------------
+    # Execute planting
+    # --------------------------------------------------
+
+    observations = env.step([
+        plant_actions,
+        {
+            "farmer": ["PASS"],
+            "hands": [],
+            "market": [],
+        },
+    ])
+
+    # --------------------------------------------------
+    # Verify real environment state
+    # --------------------------------------------------
+
+    observation = observations[0].observation
+
+    state = GameState.from_observation(
+        observation,
+        env.configuration,
+    )
+
+    tile = state.me.tile_at(target)
+
+    assert not tile.is_empty
