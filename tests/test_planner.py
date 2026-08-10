@@ -19,20 +19,25 @@ from agent.planner import Planner
 from agent.tasks import BuySeedTask, PlantTask
 from agent.world import GameState
 from agent.models.tile import Tile
+from agent.constants import Crop
+from agent.strategy.scheduler import Scheduler
+from agent.actions import Actions
+from agent.models.position import Position
+from agent.planner import Planner
+from agent.tasks import BuySeedTask, PlantTask, Task
 
 
-class DummyScheduler:
-    """
-    Minimal scheduler used to isolate Planner behavior.
 
-    The real Scheduler is tested separately.
-    These tests focus only on translating tasks into actions.
-    """
 
-    def __init__(self, task):
+class DummyScheduler(Scheduler):
+
+    def __init__(self, task: Task):
         self.task = task
 
-    def choose_task(self, state):
+    def choose_task(
+        self,
+        state: GameState,
+    ) -> Task:
         return self.task
 
 
@@ -78,7 +83,7 @@ def test_planner_executes_buy_seed_task():
     state = make_state()
 
     task = BuySeedTask(
-        crop="WHEAT",
+        crop=Crop.WHEAT,
         quantity=1,
     )
 
@@ -103,7 +108,7 @@ def test_planner_executes_plant_task_at_target():
 
     task = PlantTask(
         target=Position(0, 0),
-        crop="WHEAT",
+        crop=Crop.WHEAT,
     )
 
     planner = make_planner(task, state)
@@ -126,7 +131,7 @@ def test_planner_moves_toward_plant_target():
 
     task = PlantTask(
         target=Position(3, 0),
-        crop="WHEAT",
+        crop=Crop.WHEAT,
     )
 
     planner = make_planner(task, state)
