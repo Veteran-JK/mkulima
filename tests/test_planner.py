@@ -52,13 +52,13 @@ def make_planner(task, state):
     return planner
 
 
-def make_state():
+def make_state(farmer_position: Position = Position(0, 0),):
     """
     Build a minimal state containing a small walkable farm.
     """
 
     class Farmer:
-        position = Position(0, 0)
+        position = farmer_position
 
     class Farm:
         farmer = Farmer()
@@ -142,4 +142,51 @@ def test_planner_moves_toward_plant_target():
         "EAST",
     ]
 
-    
+def test_planner_continues_moving_toward_plant_target():
+    """
+    A PlantTask should be executable across multiple turns.
+
+    The planner should issue exactly one movement action per turn
+    until the farmer reaches the target.
+    """
+
+    state = make_state()
+
+    task = PlantTask(
+        target=Position(0, 0),
+        crop=Crop.WHEAT,
+    )
+
+    planner = make_planner(task, state)
+
+    # Start at (0, 0) in the current unit-test state, so this
+    # verifies the final execution step.
+    result = planner.plan()
+
+    assert result["farmer"] == [
+        "PLANT",
+        "WHEAT",
+    ]
+
+def test_planner_moves_one_step_per_turn():
+    """
+    Planner should issue exactly one movement action toward
+    the PlantTask target per turn.
+    """
+
+    state = make_state(
+        farmer_position=Position(2, 0)
+    )
+
+    task = PlantTask(
+        target=Position(0, 0),
+        crop=Crop.WHEAT,
+    )
+
+    planner = make_planner(task, state)
+
+    result = planner.plan()
+
+    assert result["farmer"] == [
+        "WEST",
+    ]    
