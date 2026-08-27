@@ -1,4 +1,5 @@
 import importlib
+from collections import Counter
 
 
 try:
@@ -13,55 +14,38 @@ except ImportError as exc:
 from main import agent
 
 
-def summarize_player(player_index, state):
-    observation = state[player_index]["observation"]
+actions = []
 
-    player = observation["player"]
-    farms = observation["farms"]
-    market = observation["market"]
-    town = observation["town"]
 
-    print(f"\nPLAYER {player_index}")
-    print("-" * 40)
+def tracked_agent(observation, configuration):
+    """Run Mkulima while recording every returned action."""
 
-    print(f"Reward: {state[player_index].get('reward')}")
-    print(f"Status: {state[player_index].get('status')}")
-    print(f"Day: {observation.get('day')}")
-    print(f"Hour: {observation.get('hour')}")
-    print(f"Step: {observation.get('step')}")
+    action = agent(observation, configuration)
 
-    print("\nPlayer:")
-    print(f"  {player}")
+    actions.append(action)
 
-    print("\nFarms:")
-    print(f"  Number of farms: {len(farms)}")
+    return action
 
-    for i, farm in enumerate(farms):
-        print(f"  Farm {i}:")
-        print(f"    Money: {farm.get('money')}")
-        print(f"    Farmer: {farm.get('farmer')}")
-        print(f"    Hands: {farm.get('hands')}")
-        print(f"    Unlocked quadrants: {farm.get('unlocked_quadrants')}")
 
-    print("\nMarket:")
-    print(f"  Prices: {market.get('prices')}")
+def action_name(action):
+    """Extract a readable action name from the returned action."""
 
-    print("\nTown:")
-    print(f"  Shops: {town.get('unlocked_shops')}")
+    if isinstance(action, dict):
+        return action.get("action", str(action))
+
+    return str(action)
 
 
 def main():
     env = make("kaggriculture", debug=True)
 
     results = env.run([
-        agent,
+        tracked_agent,
         "random",
     ])
 
-    state = env.state
-
     print("=" * 60)
-    print("MKULIMA BASELINE")
+    print("MKULIMA BASELINE v0.1")
     print("=" * 60)
 
     print("\nRESULTS")
@@ -69,8 +53,30 @@ def main():
     for i, result in enumerate(results):
         print(f"Player {i}: {result}")
 
-    for i in range(len(state)):
-        summarize_player(i, state)
+    print("\nACTION COUNTS")
+    print("-" * 40)
+
+    counts = Counter(
+        action_name(action)
+        for action in actions
+    )
+
+    for action, count in counts.most_common():
+        print(f"{action:<20} {count}")
+
+    print("\nTOTAL ACTIONS")
+    print("-" * 40)
+    print(len(actions))
+
+    print("\nFINAL ENVIRONMENT STATUS")
+    print("-" * 40)
+
+    for i, player in enumerate(env.state):
+        print(
+            f"Player {i}: "
+            f"status={player.get('status')}, "
+            f"reward={player.get('reward')}"
+        )
 
     print("\n" + "=" * 60)
     print("BASELINE COMPLETE")

@@ -22,7 +22,7 @@ from agent.models.position import Position
 from agent.tasks import PlantTask, Task
 from agent.strategy.base import Strategy
 from agent.world import GameState
-
+from agent.constants import Crop
 
 class FarmingStrategy(Strategy):
     """
@@ -59,7 +59,7 @@ class FarmingStrategy(Strategy):
 
                 return PlantTask(
                     target=tile.position,
-                    crop="WHEAT",
+                    crop=Crop.WHEAT,
                 )
 
         return None
