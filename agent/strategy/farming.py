@@ -19,7 +19,7 @@ Those concerns belong to other components.
 from __future__ import annotations
 
 from agent.models.position import Position
-from agent.tasks import PlantTask, Task
+from agent.tasks import PlantTask, WaterTask,Task
 from agent.strategy.base import Strategy
 from agent.world import GameState
 from agent.constants import Crop
@@ -35,21 +35,37 @@ class FarmingStrategy(Strategy):
 
     def propose(self, state: GameState) -> Task | None:
         """
-        Propose a planting task if planting is currently possible.
+        Propose the highest-priority farming task.
 
-        The strategy:
-
-        1. Checks whether wheat seeds are available.
-        2. Searches the player's farm for an unlocked empty tile.
-        3. Returns a PlantTask for the first suitable tile.
-        4. Returns None when no planting opportunity exists.
+        Priority:
+        1. Water an existing plant that has not been watered today.
+        2. Plant wheat if wheat seeds are available.
+        3. Return None when neither action is possible.
         """
 
-        # No seed means there is nothing this strategy can plant.
+        farm = state.me
+
+        # --------------------------------------------------------
+        # Priority 1: water existing crops
+        # --------------------------------------------------------
+
+        for row in farm.tiles:
+            for tile in row:
+
+                if not tile.has_plant:
+                    continue
+
+                if tile.occupant is not None and tile.occupant.needs_water:
+                    return WaterTask(
+                        target=tile.position,
+                    )
+
+        # --------------------------------------------------------
+        # Priority 2: plant wheat
+        # --------------------------------------------------------
+
         if state.seeds.get("WHEAT", 0) <= 0:
             return None
-
-        farm = state.me
 
         for row in farm.tiles:
             for tile in row:
